@@ -75,7 +75,6 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 32,
-        fontWeight: 'bold',
         textAlign: 'center',
         fontFamily: fonts.heading,
         color: colors.heading,

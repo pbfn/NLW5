@@ -5,24 +5,48 @@ import {
     StyleSheet,
     Text,
     View,
-    Image
+    Image,
+    Alert
 } from 'react-native'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import colors from '../styles/colors'
 import fonts from '../styles/fonts'
 import waterdrop from '../assets/waterdrop.png'
-import { loadPlant, PlantProps } from '../libs/storage'
+import { loadPlant, PlantProps, removePlant } from '../libs/storage'
 import { formatDistance } from 'date-fns'
 import { pt } from 'date-fns/locale'
 import { FlatList } from 'react-native-gesture-handler'
 import { PlantCardSecondary } from '../components/PlantCardSecondary'
+import { Load } from '../components/Load'
 
 export function MyPlants() {
 
     const [myPlants, setMyPlants] = useState<PlantProps[]>([])
     const [loading, setLoading] = useState(true)
     const [nextWatered, setNextWatered] = useState<String>()
+
+    function handleRemove(plant: PlantProps) {
+        Alert.alert('Remover', `Deseja removar a ${plant.name}?`, [
+            {
+                text: 'Não 🙏🏻',
+                style: 'cancel'
+            },
+            {
+                text: 'Sim 😥',
+                onPress: async () => {
+                    try {
+                        await removePlant(plant.id)
+                        setMyPlants((oldData) =>
+                            oldData.filter((item) => item.id != plant.id)
+                        )
+                    } catch (error) {
+                        Alert.alert('Não foi possível remover !')
+                    }
+                }
+            }
+        ])
+    }
 
     useEffect(() => {
         async function loadStorageData() {
@@ -43,7 +67,8 @@ export function MyPlants() {
     }, [])
 
 
-
+    if (loading)
+        return <Load />
     return (
         <View style={styles.container}>
             <Header />
@@ -68,7 +93,8 @@ export function MyPlants() {
                     keyExtractor={(item) => String(item.id)}
                     renderItem={({ item }) => (
                         <PlantCardSecondary
-                        data={item}
+                            data={item}
+                            handleRemove={() => handleRemove(item)}
                         />
                     )}
                     showsVerticalScrollIndicator={false}
@@ -93,29 +119,29 @@ const styles = StyleSheet.create({
         backgroundColor: colors.blue_light,
         paddingHorizontal: 20,
         borderRadius: 20,
-        height:110,
-        flexDirection:'row',
-        justifyContent:'space-between',
-        alignItems:'center'
+        height: 110,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
     },
     spotlightImage: {
-        width:60,
-        height:60
+        width: 60,
+        height: 60
     },
     spotlightText: {
-        flex:1,
-        color:colors.blue,
-        paddingHorizontal:20,
-        textAlign:'justify'
+        flex: 1,
+        color: colors.blue,
+        paddingHorizontal: 20,
+        textAlign: 'justify'
     },
     plants: {
-        flex:1,
-        width:'100%'
+        flex: 1,
+        width: '100%'
     },
     plantsTitle: {
-        fontSize:24,
-        fontFamily:fonts.heading,
-        color:colors.heading,
-        marginVertical:20
+        fontSize: 24,
+        fontFamily: fonts.heading,
+        color: colors.heading,
+        marginVertical: 20
     }
 })
