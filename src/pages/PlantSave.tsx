@@ -1,38 +1,95 @@
-import React from 'react'
+
+import React, { useState } from 'react'
 
 import {
     StyleSheet,
     Text,
     View,
     Alert,
-    Image
+    Image,
+    ScrollView,
+    Platform,
+    TouchableOpacity
 } from 'react-native'
-import { ScrollView } from 'react-native-gesture-handler'
+
+import { useNavigation, useRoute } from '@react-navigation/core'
+import DateTimePicker, { Event } from '@react-native-community/datetimepicker'
+
+import { getBottomSpace } from 'react-native-iphone-x-helper'
 import { SvgFromUri } from 'react-native-svg'
 
 import waterdrop from '../assets/waterdrop.png'
 import { Button } from '../components/Button'
 import colors from '../styles/colors'
 import fonts from '../styles/fonts'
+import { PlantProps, savePlant, loadPlant } from '../libs/storage'
+import { format, isBefore } from 'date-fns'
 
 
+interface Params {
+    plant: PlantProps
+}
 
 export function PlantSave() {
+    const navigation = useNavigation()
+    const [selectedDateTime, setSelectDateTime] = useState(new Date())
+    const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios')
+
+    const route = useRoute()
+    const { plant } = route.params as Params
+
+    function handleChangeTime(event: Event, dateTime: Date | undefined) {
+        if (Platform.OS === 'android') {
+            setShowDatePicker(oldState => !oldState)
+        }
+
+        if (dateTime && isBefore(dateTime, new Date())) {
+            setSelectDateTime(new Date())
+            return Alert.alert('Escolha uma hora no futuro!')
+        }
+
+
+        if (dateTime)
+            setSelectDateTime(dateTime)
+    }
+
+    function handleOpenDateTimePickerForAndroid() {
+        setShowDatePicker(oldState => !oldState)
+    }
+
+    async function handleSave() {
+        try {
+            await savePlant({
+                ...plant,
+                dateTimeNotification: selectedDateTime
+            })
+            navigation.navigate('Confirmation', {
+                title: 'Tudo certo',
+                subtitle: 'Fique tranquilo que sempre vamos lembrar você de cuidar da sua plantinha com muito cuidado',
+                buttonTitle: 'Muito Obrigado :D',
+                icon: 'hug',
+                nextScreen: 'MyPlants'
+            })
+        } catch {
+            Alert.alert('Não foi possível salvar')
+        }
+    }
+
     return (
         <View style={styles.container}>
-            <ScrollView style={styles.plantInfo}>
+            <View style={styles.plantInfo}>
                 <SvgFromUri
-                    uri=""
+                    uri={plant.photo}
                     height={150}
                     width={150}
                 />
                 <Text style={styles.plantName}>
-                    Nome da Planta
-            </Text>
+                    {plant.name}
+                </Text>
                 <Text style={styles.plantAbout}>
-                    Lorem ipsum dolor sit, amet consectetur adipisicing elit. Esse, quisquam quibusdam, id debitis neque soluta quidem maxime, distinctio voluptatum cumque natus et. Minus voluptate accusamus, ratione laudantium dolor ipsa voluptas!
-            </Text>
-            </ScrollView>
+                    {plant.about}
+                </Text>
+            </View>
 
             <View style={styles.controllers}>
                 <View style={styles.tipContainer}>
@@ -41,7 +98,7 @@ export function PlantSave() {
                         style={styles.tipImage}
                     />
                     <Text style={styles.tipText}>
-                        Lorem ipsum dolor sit amet consectetur adipisicing elisad
+                        {plant.water_tips}
                     </Text>
                 </View>
 
@@ -49,9 +106,32 @@ export function PlantSave() {
                     Escolha o melhor horário para ser lembrado
                 </Text>
 
+                {
+                    showDatePicker && (
+                        <DateTimePicker
+                            value={selectedDateTime}
+                            mode="time"
+                            display="spinner"
+                            onChange={handleChangeTime}
+                        />)
+
+                }
+                {
+                    Platform.OS === 'android' && (
+                        <TouchableOpacity
+                            onPress={handleOpenDateTimePickerForAndroid}
+                            style={styles.dateTimePickerButton}
+                        >
+                            <Text style={styles.dateTimePickerText}>
+                                {`Mudar Horário ${format(selectedDateTime, 'HH:mm')}`}
+                            </Text>
+                        </TouchableOpacity>
+
+                    )
+                }
                 <Button
                     title="Cadastrar planta"
-                    onPress={() => { }}
+                    onPress={handleSave}
                 />
             </View>
         </View>
@@ -59,37 +139,77 @@ export function PlantSave() {
 }
 
 
-
+//39:51
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: colors.shape
     },
     plantInfo: {
-
-    },
-    plantName: {
-
-    },
-    plantAbout: {
-
+        flex: 1,
+        paddingHorizontal: 30,
+        paddingVertical: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.shape
     },
     controllers: {
-
+        backgroundColor: colors.white,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: getBottomSpace() || 20
+    },
+    plantName: {
+        fontFamily: fonts.heading,
+        fontSize: 24,
+        color: colors.heading,
+        marginTop: 15,
+    },
+    plantAbout: {
+        textAlign: 'center',
+        fontFamily: fonts.text,
+        color: colors.heading,
+        fontSize: 17,
+        marginTop: 10
     },
     tipContainer: {
-
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: colors.blue_light,
+        padding: 20,
+        position: 'relative',
+        bottom: 60
     },
     tipImage: {
-
+        width: 56,
+        height: 56
     },
     tipText: {
-
+        flex: 1,
+        marginLeft: 20,
+        fontFamily: fonts.text,
+        color: colors.blue,
+        fontSize: 17,
+        textAlign: 'justify'
     },
     alertLabel: {
-
+        textAlign: 'center',
+        fontFamily: fonts.complement,
+        color: colors.heading,
+        fontSize: 12,
+        marginBottom: 5
+    },
+    dateTimePickerButton: {
+        width: '100%',
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    dateTimePickerText: {
+        color: colors.heading,
+        fontSize: 24,
+        fontFamily: fonts.text
     }
 })
